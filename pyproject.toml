@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inkit-popos"
+version = "0.1.0"
+description = "Voice dictation for Pop!_OS / COSMIC (Wayland). Cartesia Ink-2 or local Parakeet STT, text typed at your cursor."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "inkit-popos contributors" }]
+keywords = ["dictation", "speech-to-text", "wayland", "cosmic", "pop-os", "cartesia", "parakeet"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "numpy>=1.21",
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+cartesia = ["cartesia>=2.0.0"]
+parakeet = ["sherpa-onnx>=1.10.0"]
+# 'polish' (LLM cleanup) uses only the standard library, no extra deps.
+all = ["cartesia>=2.0.0", "sherpa-onnx>=1.10.0"]
+
+[project.scripts]
+inkit-popos = "inkit_popos.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mralbu/inkit-popos"
+Issues = "https://github.com/mralbu/inkit-popos/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

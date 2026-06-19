@@ -1,0 +1,14 @@
+[Unit]
+Description=InkIt-PopOS dictation daemon
+Documentation=https://github.com/mralbu/inkit-popos
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/inkit-popos daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

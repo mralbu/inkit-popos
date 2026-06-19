@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Local config / data / models
+*.local.toml
+models/
+*.onnx
+*.wav
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
