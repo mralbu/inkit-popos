@@ -20,6 +20,7 @@ from .engines.base import SttEngine
 from .inject import Injector
 from .ipc import IpcServer
 from .polish import polish_text
+from .textproc import apply_replacements, apply_spoken_punctuation
 
 STATE_IDLE = "idle"
 STATE_RECORDING = "recording"
@@ -77,6 +78,8 @@ class Daemon:
             return self._start()
         if cmd == "stop":
             return self._stop()
+        if cmd == "cancel":
+            return self._cancel()
         if cmd == "toggle":
             if self.state == STATE_RECORDING:
                 return self._stop()
@@ -106,16 +109,34 @@ class Daemon:
         threading.Thread(target=self._process, args=(audio,), daemon=True).start()
         return "processing"
 
+    def _cancel(self) -> str:
+        """Discard an in-progress recording without transcribing it."""
+        if self.state != STATE_RECORDING:
+            return self.state
+        self.recorder.stop()  # drop the captured audio
+        self.state = STATE_IDLE
+        self._notify("InkIt", "Cancelled")
+        _log("recording cancelled")
+        return "cancelled"
+
     def _process(self, audio) -> None:
         try:
             engine = self._get_engine()
             text = engine.transcribe(audio, self.recorder.sample_rate)
+            # Deterministic: spoken "comma"/"new line" -> symbols, before polish
+            # so the LLM sees already-punctuated text and won't fight it.
+            if text:
+                text = apply_spoken_punctuation(text, self.config.get("punctuation", {}))
             polish_cfg = self.config.get("polish", {})
             if text and polish_cfg.get("enabled"):
                 try:
                     text = polish_text(text, polish_cfg)
                 except Exception as exc:  # noqa: BLE001 - polish is best-effort
                     _log(f"polish failed, using raw transcript: {exc}")
+            # User substitution table runs last so it has the final say over
+            # both the raw transcript and any polish rewrite.
+            if text:
+                text = apply_replacements(text, self.config.get("replacements", {}))
             if text:
                 method = self.injector.inject_text(text)
                 _log(f"injected via {method}: {text!r}")

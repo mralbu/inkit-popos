@@ -31,6 +31,30 @@ num_threads = 2
 decoding_method = "greedy_search"
 provider = "cpu"
 
+[punctuation]
+# Turn spoken words into symbols, like classic dictation tools:
+#   "comma" -> ","   "period"/"full stop" -> "."   "question mark" -> "?"
+#   "new line" -> a line break   "new paragraph" -> a blank line
+enabled = true
+capitalize = true            # capitalize the first letter of each sentence
+
+# Add or override mappings (phrase -> symbol). Uncomment to use:
+# [punctuation.extra]
+# "percent sign" = "%"
+# "smiley" = ":)"
+
+[replacements]
+# A personal substitution table, applied last so it always wins (even over
+# polish). Great for proper nouns and acronyms the model gets wrong.
+enabled = true
+case_sensitive = false
+
+# Transcribed phrase -> text to type. Uncomment and edit:
+# [replacements.map]
+# "pop os" = "Pop!_OS"
+# "inkit" = "InkIt"
+# "my email" = "you@example.com"
+
 [polish]
 enabled = false
 provider = "openai"        # "openai" (OpenAI-compatible) or "anthropic"
