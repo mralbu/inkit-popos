@@ -79,7 +79,17 @@ class ParakeetEngine(SttEngine):
     def transcribe(self, audio: np.ndarray, sample_rate: int) -> str:
         if audio.size == 0:
             return ""
-        stream = self._recognizer.create_stream()
-        stream.accept_waveform(sample_rate, audio)
-        self._recognizer.decode_streams([stream])
-        return (stream.result.text or "").strip()
+        # The Parakeet ONNX graph can't handle long audio in one pass (its
+        # self-attention overflows), so split long input at silences and decode
+        # each chunk. Short utterances pass through unchanged as a single chunk.
+        from ..audio import split_on_silence
+
+        parts = []
+        for chunk in split_on_silence(audio, sample_rate):
+            stream = self._recognizer.create_stream()
+            stream.accept_waveform(sample_rate, chunk)
+            self._recognizer.decode_streams([stream])
+            text = (stream.result.text or "").strip()
+            if text:
+                parts.append(text)
+        return " ".join(parts).strip()

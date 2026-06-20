@@ -128,3 +128,64 @@ def _resample_linear(samples: np.ndarray, src_rate: int, dst_rate: int) -> np.nd
     src_t = np.linspace(0.0, duration, num=samples.shape[0], endpoint=False)
     dst_t = np.linspace(0.0, duration, num=dst_len, endpoint=False)
     return np.interp(dst_t, src_t, samples).astype(np.float32)
+
+
+def split_on_silence(
+    audio: np.ndarray,
+    sample_rate: int,
+    target_len_s: float = 15.0,
+    max_len_s: float = 20.0,
+    min_silence_s: float = 0.25,
+    silence_percentile: float = 20.0,
+) -> List[np.ndarray]:
+    """Split a long waveform into chunks, cutting at silences where possible.
+
+    Returns ``[audio]`` unchanged when it's already within ``max_len_s`` — so
+    short dictation utterances are never altered. Longer audio is sliced into
+    pieces of roughly ``target_len_s`` (never exceeding ``max_len_s``), choosing
+    cut points inside silent gaps so words aren't split mid-utterance. Used to
+    keep per-call input small enough for models that can't handle long audio in
+    a single pass (e.g. sherpa-onnx Parakeet).
+    """
+    n = audio.shape[0]
+    max_len = int(max_len_s * sample_rate)
+    if n <= max_len:
+        return [audio]
+
+    min_len = int(target_len_s * sample_rate)
+    frame = max(1, int(0.02 * sample_rate))  # 20 ms analysis frames
+
+    usable = (n // frame) * frame
+    frames = audio[:usable].reshape(-1, frame)
+    rms = np.sqrt(np.mean(frames.astype(np.float64) ** 2, axis=1) + 1e-12)
+    threshold = np.percentile(rms, silence_percentile)
+    is_silent = rms <= threshold
+
+    # Centers (in samples) of silent runs at least ``min_silence_s`` long.
+    min_silence_frames = max(1, int(min_silence_s / 0.02))
+    gap_centers: List[int] = []
+    run_start = None
+    for i, silent in enumerate(is_silent):
+        if silent and run_start is None:
+            run_start = i
+        elif not silent and run_start is not None:
+            if i - run_start >= min_silence_frames:
+                gap_centers.append((run_start + i) // 2 * frame)
+            run_start = None
+    if run_start is not None and len(is_silent) - run_start >= min_silence_frames:
+        gap_centers.append((run_start + len(is_silent)) // 2 * frame)
+
+    segments: List[np.ndarray] = []
+    start = 0
+    while start < n:
+        if n - start <= max_len:
+            segments.append(audio[start:])
+            break
+        window_end = start + max_len
+        # Prefer the latest silent gap within [start + min_len, window_end].
+        candidates = [c for c in gap_centers if start + min_len <= c <= window_end]
+        cut = candidates[-1] if candidates else window_end
+        segments.append(audio[start:cut])
+        start = cut
+    return [s for s in segments if s.shape[0] > 0]
+
