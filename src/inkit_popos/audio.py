@@ -1,6 +1,9 @@
 """Microphone capture and audio helpers built on PortAudio (sounddevice)."""
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 import threading
 from typing import List, Optional
 
@@ -71,8 +74,30 @@ def list_input_devices() -> List[dict]:
     return devices
 
 
-def load_wav(path: str, target_rate: int = 16000) -> np.ndarray:
-    """Load an audio file as mono float32 resampled to ``target_rate``."""
+def load_audio(path: str, target_rate: int = 16000) -> np.ndarray:
+    """Load an audio file as mono float32 resampled to ``target_rate``.
+
+    Handles WAV, FLAC, OGG, MP3 and more. Reading goes through libsndfile
+    (``soundfile``); for formats it can't decode — e.g. MP3 on older
+    libsndfile builds — it falls back to ``ffmpeg`` if installed.
+    """
+    try:
+        return _load_with_soundfile(path, target_rate)
+    except Exception as exc:  # noqa: BLE001 - retry via ffmpeg below
+        if shutil.which("ffmpeg"):
+            return _load_with_ffmpeg(path, target_rate)
+        ext = os.path.splitext(path)[1].lstrip(".").lower() or "audio"
+        raise RuntimeError(
+            f"Could not decode {ext!r} file {path!r}: {exc}. "
+            "Install ffmpeg, or a newer 'soundfile' with MP3 support."
+        ) from exc
+
+
+# Backwards-compatible alias.
+load_wav = load_audio
+
+
+def _load_with_soundfile(path: str, target_rate: int) -> np.ndarray:
     import soundfile as sf
 
     data, sr = sf.read(path, dtype="float32", always_2d=True)
@@ -80,6 +105,19 @@ def load_wav(path: str, target_rate: int = 16000) -> np.ndarray:
     if sr != target_rate:
         data = _resample_linear(data, sr, target_rate)
     return np.ascontiguousarray(data, dtype=np.float32)
+
+
+def _load_with_ffmpeg(path: str, target_rate: int) -> np.ndarray:
+    """Decode any format ffmpeg supports to mono float32 at ``target_rate``."""
+    cmd = [
+        "ffmpeg", "-nostdin", "-loglevel", "error",
+        "-i", path,
+        "-f", "f32le", "-acodec", "pcm_f32le",
+        "-ac", "1", "-ar", str(target_rate),
+        "pipe:1",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, check=True)
+    return np.frombuffer(proc.stdout, dtype="<f4").astype(np.float32)
 
 
 def _resample_linear(samples: np.ndarray, src_rate: int, dst_rate: int) -> np.ndarray:

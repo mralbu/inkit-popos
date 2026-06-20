@@ -77,12 +77,12 @@ def _cmd_devices(args: argparse.Namespace) -> int:
 
 def _cmd_transcribe(args: argparse.Namespace) -> int:
     """Transcribe an audio file directly (no daemon) for testing engines."""
-    from .audio import load_wav
+    from .audio import load_audio
     from .engines import build_engine
 
     config = load_config()
     engine = build_engine(config)
-    audio = load_wav(args.file, target_rate=config.get("audio", {}).get("sample_rate", 16000))
+    audio = load_audio(args.file, target_rate=config.get("audio", {}).get("sample_rate", 16000))
     text = engine.transcribe(audio, config.get("audio", {}).get("sample_rate", 16000))
     print(text)
     return 0
@@ -178,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("devices", help="list audio input devices").set_defaults(func=_cmd_devices)
 
     p_tr = sub.add_parser("transcribe", help="transcribe an audio file (testing)")
-    p_tr.add_argument("file", help="path to a .wav/.flac/.ogg file")
+    p_tr.add_argument("file", help="path to an audio file (wav/mp3/flac/ogg/…)")
     p_tr.set_defaults(func=_cmd_transcribe)
 
     return parser

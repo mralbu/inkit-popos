@@ -118,7 +118,7 @@ inkit-popos daemon       # run the background service (foreground)
 inkit-popos toggle       # start/stop dictation (bind to a hotkey)
 inkit-popos status       # idle | recording | processing
 inkit-popos devices      # list microphones
-inkit-popos transcribe FILE.wav   # transcribe a file (test engines, no daemon)
+inkit-popos transcribe FILE.mp3   # transcribe a wav/mp3/flac/ogg file (no daemon)
 inkit-popos doctor       # diagnose audio / injection / engine setup
 ```
 
