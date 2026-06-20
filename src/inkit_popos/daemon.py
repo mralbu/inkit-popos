@@ -13,12 +13,10 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
-from . import notify as notify_mod
 from .audio import Recorder
 from .engines import build_engine
 from .engines.base import SttEngine
-from .inject import Injector
-from .ipc import IpcServer
+from .platform import get_backend
 from .polish import polish_text
 
 STATE_IDLE = "idle"
@@ -39,11 +37,14 @@ class Daemon:
             channels=audio_cfg.get("channels", 1),
             device=audio_cfg.get("device"),
         )
-        self.injector = Injector(method=config.get("inject", {}).get("method", "auto"))
+        self.backend = get_backend()
+        self.injector = self.backend.make_injector(
+            method=config.get("inject", {}).get("method", "auto")
+        )
         self.state = STATE_IDLE
         self._engine: Optional[SttEngine] = None
         self._engine_lock = threading.Lock()
-        self._server = IpcServer(self._handle)
+        self._server = self.backend.make_ipc_server(self._handle)
 
     # -- engine (lazy, cached) ----------------------------------------------
 
@@ -63,7 +64,7 @@ class Daemon:
     # -- notifications -------------------------------------------------------
 
     def _notify(self, summary: str, body: str = "") -> None:
-        notify_mod.notify(summary, body, enabled=self.config.get("notify", True))
+        self.backend.notify(summary, body, enabled=self.config.get("notify", True))
 
     # -- command handling ----------------------------------------------------
 

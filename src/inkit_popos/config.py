@@ -7,9 +7,10 @@ Config lives at ``$XDG_CONFIG_HOME/inkit-popos/config.toml`` (usually
 from __future__ import annotations
 
 import copy
-import os
 from pathlib import Path
 from typing import Any, Dict
+
+from .platform import get_backend
 
 try:  # Python 3.11+
     import tomllib
@@ -58,8 +59,7 @@ DEFAULTS: Dict[str, Any] = {
 
 
 def config_dir() -> Path:
-    base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return Path(base) / "inkit-popos"
+    return get_backend().config_dir()
 
 
 def config_path() -> Path:
@@ -67,8 +67,7 @@ def config_path() -> Path:
 
 
 def data_dir() -> Path:
-    base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    return Path(base) / "inkit-popos"
+    return get_backend().data_dir()
 
 
 def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:

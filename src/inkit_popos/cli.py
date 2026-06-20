@@ -13,8 +13,8 @@ import sys
 from typing import List, Optional
 
 from . import __version__
-from . import ipc
 from .config import config_path, load_config, write_default_config
+from .platform import get_backend
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -28,19 +28,20 @@ def _cmd_init(args: argparse.Namespace) -> int:
 def _cmd_daemon(args: argparse.Namespace) -> int:
     from .daemon import Daemon
 
-    if ipc.is_running():
-        print("A daemon is already running on this socket.", file=sys.stderr)
+    if get_backend().ipc_is_running():
+        print("A daemon is already running.", file=sys.stderr)
         return 1
     config = load_config()
     return Daemon(config).run()
 
 
 def _send(command: str) -> int:
-    if not ipc.is_running():
+    backend = get_backend()
+    if not backend.ipc_is_running():
         print("Daemon is not running. Start it with: inkit-popos daemon", file=sys.stderr)
         return 1
     try:
-        print(ipc.send_command(command))
+        print(backend.ipc_send(command))
         return 0
     except OSError as exc:
         print(f"IPC error: {exc}", file=sys.stderr)
@@ -89,10 +90,7 @@ def _cmd_transcribe(args: argparse.Namespace) -> int:
 
 
 def _cmd_doctor(args: argparse.Namespace) -> int:
-    import shutil
-
-    from .inject import available_methods
-
+    backend = get_backend()
     config = load_config()
     ok = True
 
@@ -112,7 +110,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
         ok = False
 
     # Injection
-    methods = available_methods()
+    methods = backend.injection_methods()
     print(f"injection tools: {', '.join(methods) if methods else 'NONE — install wtype, ydotool, or wl-clipboard'}")
     ok = ok and bool(methods)
 
@@ -143,20 +141,11 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     if config.get("polish", {}).get("enabled"):
         print("polish: enabled")
 
-    print("notify-send:", "installed" if shutil.which("notify-send") else "missing (notifications disabled)")
-    print("ydotoold:", "running" if _ydotoold_ok() else "not detected (only needed for ydotool injection)")
+    for line in backend.doctor_extra():
+        print(line)
 
     print("\nstatus:", "OK" if ok else "issues found — see above")
     return 0 if ok else 1
-
-
-def _ydotoold_ok() -> bool:
-    import os
-
-    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
-    return os.path.exists(os.path.join(runtime, ".ydotool_socket")) or os.path.exists(
-        "/run/ydotoold/socket"
-    )
 
 
 def build_parser() -> argparse.ArgumentParser:
