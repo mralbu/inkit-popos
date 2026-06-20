@@ -19,7 +19,13 @@ API *or* a fully local **NVIDIA Parakeet** model — switch with one config line
                   STT engine: Cartesia API  │  local Parakeet (sherpa-onnx)
                               │
                               ▼
+              spoken punctuation ("comma" → ,) + capitalization
+                              │
+                              ▼
                    optional LLM "polish" (filler/punctuation cleanup)
+                              │
+                              ▼
+              word-replacement table ("pop os" → Pop!_OS), final say
                               │
                               ▼
               type at cursor: wtype │ ydotool │ clipboard paste
@@ -92,7 +98,50 @@ export CARTESIA_API_KEY=sk_car_...   # or set cartesia.api_key in the config
 2. **Settings → Keyboard → Custom Shortcuts → Add**
 3. Command: `inkit-popos toggle` — assign a key (e.g. `Super+Z`).
 
-Press it once to start listening, press again to stop and type the result.
+Press it once to start listening, press again to stop and type the result. To
+throw away a recording mid-thought, bind a second shortcut to
+`inkit-popos cancel`.
+
+## Speak punctuation
+
+Dictate punctuation by saying it — on by default (`[punctuation]` in the
+config). Sentences are auto-capitalized.
+
+| Say… | You get |
+| --- | --- |
+| `comma` | `,` |
+| `period` / `full stop` | `.` |
+| `question mark` | `?` |
+| `exclamation mark` / `point` | `!` |
+| `colon` / `semicolon` | `:` `;` |
+| `open paren` … `close paren` | `(` … `)` |
+| `new line` | a line break |
+| `new paragraph` | a blank line |
+
+So *"hello comma world period new line thanks"* types:
+
+```
+Hello, world.
+Thanks
+```
+
+Add your own under `[punctuation.extra]` (e.g. `"percent sign" = "%"`).
+
+## Fix words automatically
+
+The model will mishear proper nouns and acronyms. A personal substitution table
+patches them after transcription — and it runs *last*, so it overrides even
+`polish`:
+
+```toml
+[replacements.map]
+"pop os" = "Pop!_OS"
+"inkit" = "InkIt"
+"my work email" = "you@company.com"
+```
+
+Matching is whole-word and case-insensitive by default
+(`replacements.case_sensitive = true` to change that).
 
 ## Run as a service
 
@@ -116,6 +165,7 @@ systemctl --user enable --now ydotoold   # or run `ydotoold` manually
 ```bash
 inkit-popos daemon       # run the background service (foreground)
 inkit-popos toggle       # start/stop dictation (bind to a hotkey)
+inkit-popos cancel       # discard the current recording (bind to a hotkey)
 inkit-popos status       # idle | recording | processing
 inkit-popos devices      # list microphones
 inkit-popos transcribe FILE.mp3   # transcribe a wav/mp3/flac/ogg file (no daemon)
@@ -133,6 +183,8 @@ inkit-popos doctor       # diagnose audio / injection / engine setup
 | `inject.method` | `auto` \| `wtype` \| `ydotool` \| `clipboard` |
 | `cartesia.api_key` / `.model` / `.language` | Cartesia settings |
 | `parakeet.model_dir` / `.provider` | local model dir, `cpu`/`cuda` |
+| `punctuation.enabled` / `.capitalize` / `.extra` | spoken punctuation → symbols |
+| `replacements.enabled` / `.case_sensitive` / `.map` | personal word-fix table |
 | `polish.enabled` / `.provider` / `.model` | optional LLM cleanup |
 
 ### Polish (optional)

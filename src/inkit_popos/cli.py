@@ -59,6 +59,10 @@ def _cmd_stop(args: argparse.Namespace) -> int:
     return _send("stop")
 
 
+def _cmd_cancel(args: argparse.Namespace) -> int:
+    return _send("cancel")
+
+
 def _cmd_status(args: argparse.Namespace) -> int:
     return _send("status")
 
@@ -140,6 +144,11 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
         print(f"parakeet model_dir: {model_dir} ({'found' if os.path.isdir(model_dir) else 'MISSING — see README'})")
         ok = ok and os.path.isdir(model_dir)
 
+    if config.get("punctuation", {}).get("enabled", True):
+        print("spoken punctuation: enabled")
+    repl = config.get("replacements", {})
+    if repl.get("enabled", True) and repl.get("map"):
+        print(f"word replacements: {len(repl['map'])} rule(s)")
     if config.get("polish", {}).get("enabled"):
         print("polish: enabled")
 
@@ -173,6 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("toggle", help="start/stop dictation (bind to a hotkey)").set_defaults(func=_cmd_toggle)
     sub.add_parser("start", help="begin recording").set_defaults(func=_cmd_start)
     sub.add_parser("stop", help="stop recording and transcribe").set_defaults(func=_cmd_stop)
+    sub.add_parser("cancel", help="discard the current recording (bind to a hotkey)").set_defaults(func=_cmd_cancel)
     sub.add_parser("status", help="show daemon state").set_defaults(func=_cmd_status)
     sub.add_parser("quit", help="stop the daemon").set_defaults(func=_cmd_quit)
     sub.add_parser("devices", help="list audio input devices").set_defaults(func=_cmd_devices)

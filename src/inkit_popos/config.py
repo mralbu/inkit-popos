@@ -44,6 +44,22 @@ DEFAULTS: Dict[str, Any] = {
         "decoding_method": "greedy_search",
         "provider": "cpu",  # "cpu" or "cuda"
     },
+    "punctuation": {
+        # Turn spoken words into symbols: "comma" -> ",", "new line" -> newline.
+        "enabled": True,
+        # Capitalize the first letter of each sentence.
+        "capitalize": True,
+        # Add/override phrase -> symbol mappings, e.g. { "percent sign" = "%" }.
+        "extra": {},
+    },
+    "replacements": {
+        # Personal word/phrase substitution table, applied after transcription
+        # (and after polish), so it always wins.
+        "enabled": True,
+        "case_sensitive": False,
+        # Transcribed phrase -> text to type, e.g. { "pop os" = "Pop!_OS" }.
+        "map": {},
+    },
     "polish": {
         # Optional LLM cleanup of the transcript (filler removal, punctuation).
         "enabled": False,
@@ -123,6 +139,30 @@ model_dir = "~/.local/share/inkit-popos/models/parakeet"
 num_threads = 2
 decoding_method = "greedy_search"
 provider = "cpu"
+
+[punctuation]
+# Turn spoken words into symbols, like classic dictation tools:
+#   "comma" -> ","   "period"/"full stop" -> "."   "question mark" -> "?"
+#   "new line" -> a line break   "new paragraph" -> a blank line
+enabled = true
+capitalize = true            # capitalize the first letter of each sentence
+
+# Add or override mappings (phrase -> symbol). Uncomment to use:
+# [punctuation.extra]
+# "percent sign" = "%"
+# "smiley" = ":)"
+
+[replacements]
+# A personal substitution table, applied last so it always wins (even over
+# polish). Great for proper nouns and acronyms the model gets wrong.
+enabled = true
+case_sensitive = false
+
+# Transcribed phrase -> text to type. Uncomment and edit:
+# [replacements.map]
+# "pop os" = "Pop!_OS"
+# "inkit" = "InkIt"
+# "my email" = "you@example.com"
 
 [polish]
 enabled = false
