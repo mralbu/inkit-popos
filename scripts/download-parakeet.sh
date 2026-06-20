@@ -10,7 +10,7 @@
 #   https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
 set -euo pipefail
 
-MODEL="${1:-sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8}"
+MODEL="${1:-sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8}"
 DEST="${2:-$HOME/.local/share/inkit-popos/models/parakeet}"
 BASE="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models"
 URL="$BASE/${MODEL}.tar.bz2"
